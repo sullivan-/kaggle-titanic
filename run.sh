@@ -21,5 +21,8 @@ spark-submit --class Discretize target/scala-2.11/titanic_2.11-0.0.1.jar
 mv data/discrete_out/part* data/discrete.csv
 rm -rf data/discrete_out
 
-ls -l data
+# train
+rm -rf model
+spark-submit --class TrainDecisionTree target/scala-2.11/titanic_2.11-0.0.1.jar
+
 

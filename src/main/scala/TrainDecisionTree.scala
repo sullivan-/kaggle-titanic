@@ -28,32 +28,39 @@ object TrainDecisionTree extends App {
     .load("data/discrete.csv")
     .filter("Survived is not null")
     .map(util.toPoint)
-    .rdd
 
-  // Split the data into training and test sets (30% held out for testing)
-  val splits = data.randomSplit(Array(0.7, 0.3))
-  val (trainingData, testData) = (splits(0), splits(1))
+  import org.apache.spark.ml.tuning.CrossValidator
+  import org.apache.spark.ml.tuning.ParamGridBuilder
+  import org.apache.spark.ml.classification.DecisionTreeClassifier
+  import org.apache.spark.ml.classification.DecisionTreeClassificationModel
+  import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 
-  // Train a DecisionTree model. Empty categoricalFeaturesInfo indicates all features are continuous.
-  val numClasses = 2
-  val categoricalFeaturesInfo = Map[Int, Int]()
-  val impurity = args(0)       // "gini"
-  val maxDepth = args(1).toInt // 5
-  val maxBins  = args(2).toInt // 32
+  val classifier = new DecisionTreeClassifier
+  val paramGrid = new ParamGridBuilder()
+    .addGrid(classifier.impurity, Array("entropy", "gini"))
+    .addGrid(classifier.maxBins, Array(4, 8, 16, 32, 64))
+    .addGrid(classifier.maxDepth, Array(2, 3, 4, 5, 6))
+    .build()
 
-  val model = DecisionTree.trainClassifier(trainingData, numClasses, categoricalFeaturesInfo,
-    impurity, maxDepth, maxBins)
+  val cv = new CrossValidator()
+    .setEstimator(classifier)
+    .setEvaluator(new BinaryClassificationEvaluator)
+    .setEstimatorParamMaps(paramGrid)
+    .setNumFolds(4)
+    .setParallelism(2)
 
-  // Evaluate model on test instances and compute test error
-  val labelAndPreds = testData.map { point =>
-    val prediction = model.predict(point.features)
-    (point.label, prediction)
-  }
-  val testErr = labelAndPreds.filter(r => r._1 != r._2).count().toDouble / testData.count()
-  println(s"Test Error = $testErr")
+  val model = cv.fit(data).bestModel.asInstanceOf[DecisionTreeClassificationModel]
   println(s"Learned classification tree model:\n ${model.toDebugString}")
 
-  // model.save(sparkContext, "decisionTreeClassificationModel")
+  // sanity check that the cv model is reasonable
+  val splits = data.randomSplit(Array(0.7, 0.3))
+  val (trainingData, testData) = (splits(0), splits(1))
+  val testErr = model.transform(testData).filter({ r =>
+    r.getAs[Double]("label") != r.getAs[Double]("prediction")
+  }).count.toDouble / testData.count
+  println(s"Test Error = $testErr")
+
+  model.save("model")
   // val sameModel = DecisionTreeModel.load(sc, "decisionTreeClassificationModel")
 
 }

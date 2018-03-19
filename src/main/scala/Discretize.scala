@@ -7,7 +7,7 @@
  *
  * it outputs the result to directory `data/discrete_out`.
  */
-object Discretize extends Titanic with App {
+object Discretize extends App {
 
   val columnsToDiscretize = Seq("Name", "Sex", "Ticket", "Cabin", "Embarked")
 
