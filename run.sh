@@ -25,4 +25,11 @@ rm -rf data/discrete_out
 rm -rf model
 spark-submit --class TrainDecisionTree target/scala-2.11/titanic_2.11-0.0.1.jar
 
+# generate submission
+rm -rf data/submission_out
+spark-submit --class RunDecisionTree target/scala-2.11/titanic_2.11-0.0.1.jar
+mv data/submission_out/part* data/submission.csv
+rm -rf data/submission_out
+
+
 

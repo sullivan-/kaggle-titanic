@@ -1,20 +1,17 @@
 import org.apache.spark.SparkContext
+import org.apache.spark.ml.classification.DecisionTreeClassificationModel
+import org.apache.spark.ml.classification.DecisionTreeClassifier
+import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.feature.StringIndexer
-import org.apache.spark.mllib.tree.DecisionTree
-import org.apache.spark.mllib.tree.model.DecisionTreeModel
-import org.apache.spark.mllib.util.MLUtils
+import org.apache.spark.ml.tuning.CrossValidator
+import org.apache.spark.ml.tuning.ParamGridBuilder
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.Row
-import org.apache.spark.mllib.regression.LabeledPoint
 
 object TrainDecisionTree extends App {
 
-  val sparkSession = SparkSession
-    .builder
-    .appName("StringIndexerExample")
-    .getOrCreate()
-
+  val sparkSession = SparkSession.builder.appName("TrainDecisionTree").getOrCreate()
   val sparkContext = sparkSession.sparkContext
   val sqlContext = sparkSession.sqlContext
 
@@ -29,17 +26,11 @@ object TrainDecisionTree extends App {
     .filter("Survived is not null")
     .map(util.toPoint)
 
-  import org.apache.spark.ml.tuning.CrossValidator
-  import org.apache.spark.ml.tuning.ParamGridBuilder
-  import org.apache.spark.ml.classification.DecisionTreeClassifier
-  import org.apache.spark.ml.classification.DecisionTreeClassificationModel
-  import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
-
   val classifier = new DecisionTreeClassifier
   val paramGrid = new ParamGridBuilder()
-    .addGrid(classifier.impurity, Array("entropy", "gini"))
-    .addGrid(classifier.maxBins, Array(4, 8, 16, 32, 64))
-    .addGrid(classifier.maxDepth, Array(2, 3, 4, 5, 6))
+    .addGrid(classifier.impurity, Array("entropy", "gini")) // chooses gini
+    .addGrid(classifier.maxBins, Array(4, 6, 7, 8, 9, 10, 12, 16, 32)) // chooses 8
+    .addGrid(classifier.maxDepth, Array(2, 3, 4, 5)) // chooses 3
     .build()
 
   val cv = new CrossValidator()
@@ -49,8 +40,10 @@ object TrainDecisionTree extends App {
     .setNumFolds(4)
     .setParallelism(2)
 
-  val model = cv.fit(data).bestModel.asInstanceOf[DecisionTreeClassificationModel]
-  println(s"Learned classification tree model:\n ${model.toDebugString}")
+  val cvModel = cv.fit(data)
+  val model = cvModel.bestModel.asInstanceOf[DecisionTreeClassificationModel]
+  //println(s"""PARAM ${model.params.toSeq.map(model.explainParam).mkString("\nPARAM ")}""")
+  //println(s"Learned classification tree model:\n ${model.toDebugString}")
 
   // sanity check that the cv model is reasonable
   val splits = data.randomSplit(Array(0.7, 0.3))
@@ -58,10 +51,10 @@ object TrainDecisionTree extends App {
   val testErr = model.transform(testData).filter({ r =>
     r.getAs[Double]("label") != r.getAs[Double]("prediction")
   }).count.toDouble / testData.count
-  println(s"Test Error = $testErr")
+  //println(s"Test Error = $testErr")
 
   model.save("model")
-  // val sameModel = DecisionTreeModel.load(sc, "decisionTreeClassificationModel")
+  // val sameModel = DecisionTreeModel.load(sc, "model")
 
 }
 
