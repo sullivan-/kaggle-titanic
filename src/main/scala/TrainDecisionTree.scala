@@ -51,9 +51,9 @@ object TrainDecisionTree extends App {
   val testErr = model.transform(testData).filter({ r =>
     r.getAs[Double]("label") != r.getAs[Double]("prediction")
   }).count.toDouble / testData.count
-  //println(s"Test Error = $testErr")
+  println(s"Test Error = $testErr")
 
-  model.save("model")
+  model.write.overwrite().save("model")
   // val sameModel = DecisionTreeModel.load(sc, "model")
 
 }

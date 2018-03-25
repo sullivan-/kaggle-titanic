@@ -4,3 +4,5 @@ data/clean.csv
 data/discrete.csv
 /target
 model
+/data/merged.csv
+/data/submission.csv

@@ -9,7 +9,7 @@
  */
 object Discretize extends App {
 
-  val columnsToDiscretize = Seq("Name", "Sex", "Ticket", "Cabin", "Embarked")
+  val columnsToDiscretize = Seq("Sex", "Embarked", "Title", "TicketCode", "Deck")
 
   import org.apache.spark.sql.SparkSession
   import org.apache.spark.SparkContext

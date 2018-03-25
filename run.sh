@@ -13,7 +13,10 @@ mv data/merge_out/part* data/merged.csv
 rm -rf data/merge_out
 
 # todo: clean
-mv data/merged.csv data/clean.csv
+rm -rf data/clean_out
+spark-submit --class Clean target/scala-2.11/titanic_2.11-0.0.1.jar
+mv data/clean_out/part* data/clean.csv
+rm -rf data/clean_out
 
 # discretize
 rm -rf data/discrete_out
